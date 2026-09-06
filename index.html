@@ -641,9 +641,6 @@
     .compat-pair{ grid-template-columns: 1fr; }
   }
 </style>
-<!-- Firebase (무료 Spark 요금제 / Firestore만 사용) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -771,7 +768,6 @@
       </div>
 
       <button type="submit" class="submit-btn">사주 풀이 보기</button>
-      <button type="button" class="admin-link" id="openAdminBtn">관리자 모드</button>
     </form>
   </section>
 
@@ -813,7 +809,7 @@
       </div>
 
       <p class="result-note">
-        네 기둥은 절기 경계를 근사한 계산식(입춘·경칩 등 고정일 기준)과 60갑자 순환식으로 산출한 결과이며, 아래 해설은 일간·오행·십성 분포를 바탕으로 자동 생성된 참고용 풀이입니다. 실제 절기 시각은 해마다 몇 시간에서 하루가량 차이가 날 수 있고, 23시대 출생은 다음 날 일주·시주 기준으로 계산했습니다. 대운(大運)처럼 10년 단위 흐름은 포함되어 있지 않으며, 건강 관련 내용은 전통 오행 상징일 뿐 의학적 진단이 아닙니다. 중요한 판단에는 정식 만세력과 전문가 상담을 함께 참고해 주세요.
+        네 기둥은 절기 경계를 근사한 계산식(입춘·경칩 등 고정일 기준)과 60갑자 순환식으로 산출한 결과이며, 아래 해설은 일간·오행·십성 분포를 바탕으로 자동 생성된 참고용 풀이입니다. 실제 절기 시각은 해마다 몇 시간에서 하루가량 차이가 날 수 있고, 23시대 출생은 다음 날 일주·시주 기준으로 계산했습니다. 대운(大運) 흐름도 함께 담았지만 절기 경계를 근사한 값(고정 절입일 기준)으로 계산한 참고용 나이대이며, 실제 출생 시각 기준의 정밀한 절기 계산과는 차이가 있을 수 있습니다. 건강 관련 내용은 전통 오행 상징일 뿐 의학적 진단이 아닙니다. 중요한 판단에는 정식 만세력과 전문가 상담을 함께 참고해 주세요.
       </p>
     </div>
   </section>
@@ -874,6 +870,7 @@
       </div>
 
       <button type="submit" class="submit-btn">궁합 보기</button>
+      <button type="button" class="admin-link" id="openAdminBtn">관리자 모드</button>
     </form>
 
     <div class="result compat-result" id="compatResult" style="max-width:none; padding:0; margin-top:28px;">
@@ -969,7 +966,7 @@
 
 </div>
 
-<script>
+<script type="module">
   /* ===================== 공통 계산 엔진 ===================== */
   const STEMS = ['갑','을','병','정','무','기','경','신','임','계'];
   const BRANCHES = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
@@ -1080,26 +1077,67 @@
     return counts;
   }
 
+  /* ---------- 대운(大運) 계산: 월주를 기준으로 순행/역행하는 10년 주기 ---------- */
+  const TERM_BOUNDARIES = [
+    [1,6],[2,4],[3,6],[4,5],[5,6],[6,6],[7,7],[8,8],[9,8],[10,8],[11,7],[12,7]
+  ]; // getMonthBranch()의 고정 절입일과 동일한 근사값
+
+  function nearestTermBoundaries(Y, M, D){
+    const birthJdn = toJDN(Y, M, D);
+    const candidates = [];
+    [Y - 1, Y, Y + 1].forEach(yy => {
+      TERM_BOUNDARIES.forEach(([mm, dd]) => candidates.push(toJDN(yy, mm, dd)));
+    });
+    candidates.sort((a, b) => a - b);
+    let prevJdn = candidates[0], nextJdn = candidates[candidates.length - 1];
+    for(let i = 0; i < candidates.length; i++){
+      if(candidates[i] <= birthJdn) prevJdn = candidates[i];
+      if(candidates[i] > birthJdn){ nextJdn = candidates[i]; break; }
+    }
+    return { prevJdn, nextJdn, birthJdn };
+  }
+
+  function stepGanzi(stemIdx, branchIdx, step){
+    return { stem: mod(stemIdx + step, 10), branch: mod(branchIdx + step, 12) };
+  }
+
+  function computeDaeyunPeriods(p, gender, Y, M, D){
+    const isYangYear = (p.year.stem % 2 === 0);
+    const isMale = gender === '남성';
+    const forward = (isYangYear && isMale) || (!isYangYear && !isMale);
+
+    const { prevJdn, nextJdn, birthJdn } = nearestTermBoundaries(Y, M, D);
+    const daysUsed = forward ? (nextJdn - birthJdn) : (birthJdn - prevJdn);
+    const startAge = Math.max(1, Math.round(daysUsed / 3)); // 전통식 "3일=1년" 환산(근사치)
+
+    const periods = [];
+    for(let i = 1; i <= 6; i++){
+      const g = stepGanzi(p.month.stem, p.month.branch, forward ? i : -i);
+      periods.push({ startAge: startAge + (i - 1) * 10, stem: g.stem, branch: g.branch });
+    }
+    return { forward, startAge, periods, genderAssumed: gender === '선택 안 함' };
+  }
+
   /* ---------- 텍스트 자료 ---------- */
   const DAY_MASTER_TEXT = {
-    '갑': '갑목(甲木)은 큰 나무의 기운입니다. 곧고 위로 뻗어가려는 성향이 강해 원칙을 지키고 앞장서서 이끄는 리더십을 갖습니다. 융통성보다 방향성을 중요하게 여기는 편입니다.',
-    '을': '을목(乙木)은 화초와 덩굴의 기운입니다. 단단하지 않아도 휘어지며 자라나는 유연함과 적응력이 강점이고, 주변과의 관계를 부드럽게 풀어가는 친화력이 돋보입니다.',
-    '병': '병화(丙火)는 태양의 기운입니다. 밝고 확산하는 에너지로 주변을 환하게 비추며, 표현력이 풍부하고 활동적으로 움직일 때 힘을 얻는 성향입니다.',
-    '정': '정화(丁火)는 촛불과 달빛의 기운입니다. 은은하지만 꺼지지 않는 열정을 품고 있어, 겉으로 드러내기보다 섬세하고 따뜻하게 마음을 나누는 편입니다.',
-    '무': '무토(戊土)는 산과 넓은 대지의 기운입니다. 묵직한 신뢰감과 포용력을 지녀 주변 사람들이 기대어 쉴 수 있는 존재가 되지만, 변화에는 다소 신중한 편입니다.',
-    '기': '기토(己土)는 논밭처럼 사람을 살리는 땅의 기운입니다. 세심하고 성실하며, 화려함보다 실속을 챙기는 현실적인 감각이 돋보입니다.',
-    '경': '경금(庚金)은 무쇠와 칼의 기운입니다. 맺고 끊음이 분명하고 의지가 강해, 원칙을 세우면 흔들리지 않고 밀고 나가는 추진력을 지녔습니다.',
-    '신': '신금(辛金)은 보석과 장신구의 기운입니다. 예민하고 섬세한 감각으로 디테일을 잘 챙기며, 미적인 취향과 자기관리에 대한 기준이 뚜렷한 편입니다.',
-    '임': '임수(壬水)는 큰 강과 바다의 기운입니다. 생각의 폭이 넓고 포용력이 있어 다양한 사람과 상황을 아우르며, 상황에 맞춰 유연하게 흘러가는 지혜를 지녔습니다.',
-    '계': '계수(癸水)는 이슬과 샘물의 기운입니다. 조용하지만 예리한 직관을 지녔고, 겉으로 드러내지 않아도 깊이 있게 관찰하고 사람을 헤아리는 힘이 있습니다.'
+    '갑': '갑목(甲木)은 큰 나무의 기운입니다. 곧고 위로 뻗어가려는 성향이 강해 원칙을 지키고 앞장서서 이끄는 리더십을 갖습니다. 융통성보다 방향성을 중요하게 여기는 편이라 한번 정한 길은 잘 바꾸지 않고 우직하게 밀고 나갑니다. 다만 그만큼 고집이 세다는 인상을 줄 수 있어, 주변의 의견에 귀를 기울이는 유연함을 곁들이면 리더십이 한층 더 빛을 발합니다.',
+    '을': '을목(乙木)은 화초와 덩굴의 기운입니다. 단단하지 않아도 휘어지며 자라나는 유연함과 적응력이 강점이고, 주변과의 관계를 부드럽게 풀어가는 친화력이 돋보입니다. 어떤 환경에서도 뿌리를 내리는 생존력이 있어 위기 속에서도 길을 찾아내는 편입니다. 다만 스스로 중심을 잃고 남에게 휘둘리기 쉬운 면도 있으니, 부드러움 속에서도 자기만의 기준을 놓지 않는 연습이 필요합니다.',
+    '병': '병화(丙火)는 태양의 기운입니다. 밝고 확산하는 에너지로 주변을 환하게 비추며, 표현력이 풍부하고 활동적으로 움직일 때 힘을 얻는 성향입니다. 사람들 앞에서 자연스럽게 주목받고, 특유의 밝은 기운으로 분위기를 이끄는 데 능합니다. 다만 감정 기복이 겉으로 잘 드러나고 열정이 오래가지 않을 수 있어, 꾸준함을 더하는 습관을 들이면 큰 힘이 됩니다.',
+    '정': '정화(丁火)는 촛불과 달빛의 기운입니다. 은은하지만 꺼지지 않는 열정을 품고 있어, 겉으로 드러내기보다 섬세하고 따뜻하게 마음을 나누는 편입니다. 한 사람 한 사람을 세심하게 챙기는 힘이 있어 깊이 있는 관계를 만드는 데 강점을 보입니다. 다만 속으로 삭이는 성향이 강해 스트레스가 쌓이기 쉬우니, 감정을 적절히 표현하는 통로를 마련해 두는 것이 좋습니다.',
+    '무': '무토(戊土)는 산과 넓은 대지의 기운입니다. 묵직한 신뢰감과 포용력을 지녀 주변 사람들이 기대어 쉴 수 있는 존재가 되지만, 변화에는 다소 신중한 편입니다. 큰 그림을 보는 안목과 책임감이 있어 사람들을 아우르는 자리에서 진가를 발휘합니다. 다만 한번 자리 잡은 생각은 쉽게 움직이지 않아 고지식하다는 평가를 받을 수 있어, 새로운 시도에 조금 더 마음을 열어보는 것이 좋습니다.',
+    '기': '기토(己土)는 논밭처럼 사람을 살리는 땅의 기운입니다. 세심하고 성실하며, 화려함보다 실속을 챙기는 현실적인 감각이 돋보입니다. 주변 사람을 묵묵히 돌보고 자기 자리에서 꾸준히 결과를 만들어내는 저력이 있습니다. 다만 지나치게 걱정이 많아지거나 자신을 낮추는 습관이 심해질 수 있어, 스스로의 성과를 인정하는 연습이 필요합니다.',
+    '경': '경금(庚金)은 무쇠와 칼의 기운입니다. 맺고 끊음이 분명하고 의지가 강해, 원칙을 세우면 흔들리지 않고 밀고 나가는 추진력을 지녔습니다. 위기 상황에서 오히려 냉철하게 판단하고 결단하는 힘이 돋보입니다. 다만 표현이 직선적이라 주변 사람들에게 차갑게 느껴질 수 있어, 말투에 부드러움을 더하면 관계가 한결 편안해집니다.',
+    '신': '신금(辛金)은 보석과 장신구의 기운입니다. 예민하고 섬세한 감각으로 디테일을 잘 챙기며, 미적인 취향과 자기관리에 대한 기준이 뚜렷한 편입니다. 완성도를 중요하게 여겨 맡은 일을 정교하게 마무리하는 힘이 있습니다. 다만 기준이 높은 만큼 스스로와 주변에 예민해지기 쉬우니, 완벽보다 충분함을 받아들이는 여유가 도움이 됩니다.',
+    '임': '임수(壬水)는 큰 강과 바다의 기운입니다. 생각의 폭이 넓고 포용력이 있어 다양한 사람과 상황을 아우르며, 상황에 맞춰 유연하게 흘러가는 지혜를 지녔습니다. 큰 그릇처럼 다양한 의견을 담아내고 상황 변화에 잘 대처하는 임기응변이 강점입니다. 다만 마음이 여러 갈래로 흩어지기 쉬워 한 가지에 집중하는 힘을 기르면 더 큰 성취로 이어질 수 있습니다.',
+    '계': '계수(癸水)는 이슬과 샘물의 기운입니다. 조용하지만 예리한 직관을 지녔고, 겉으로 드러내지 않아도 깊이 있게 관찰하고 사람을 헤아리는 힘이 있습니다. 작은 변화도 놓치지 않는 섬세함으로 신뢰를 얻는 편입니다. 다만 속내를 잘 드러내지 않아 주변에서 오해하기 쉬우니, 마음을 조금씩 표현하는 연습을 하면 관계가 더 깊어집니다.'
   };
 
   const TENGOD_TENDENCY = {
-    비겁: '자기 기준이 뚜렷하고 주도적으로 움직이려는 힘이 강한 편입니다.',
-    식상: '생각이나 감정을 표현하고 새로운 것을 만들어내는 데서 에너지를 얻는 편입니다.',
-    재성: '눈에 보이는 결과와 실리를 중요하게 여기고, 현실 감각이 발달한 편입니다.',
-    관성: '책임감이 강하고 규칙과 질서 안에서 안정을 찾으려는 편입니다.',
-    인성: '배우고 받아들이는 것을 좋아하며, 신중하게 준비한 뒤 움직이는 편입니다.'
+    비겁: '자기 기준이 뚜렷하고 주도적으로 움직이려는 힘이 강한 편입니다. 독립심이 강해 스스로 결정하고 밀어붙이는 추진력이 있지만, 협업에서는 고집을 조금 내려놓는 유연함이 필요합니다.',
+    식상: '생각이나 감정을 표현하고 새로운 것을 만들어내는 데서 에너지를 얻는 편입니다. 아이디어가 풍부하고 순발력이 좋아 재치 있게 상황을 풀어가지만, 하나에 집중해서 끝까지 완성하는 뒷심을 기르면 더 큰 성과로 이어집니다.',
+    재성: '눈에 보이는 결과와 실리를 중요하게 여기고, 현실 감각이 발달한 편입니다. 계획을 세우고 자원을 관리하는 능력이 뛰어나지만, 결과에만 치우치면 과정에서의 만족감을 놓칠 수 있어 균형이 필요합니다.',
+    관성: '책임감이 강하고 규칙과 질서 안에서 안정을 찾으려는 편입니다. 맡은 역할을 성실히 해내는 신뢰감이 강점이지만, 스스로를 지나치게 옥죄지 않도록 가끔은 규칙에서 벗어난 여유도 필요합니다.',
+    인성: '배우고 받아들이는 것을 좋아하며, 신중하게 준비한 뒤 움직이는 편입니다. 이론과 배경지식이 탄탄해 신뢰를 주지만, 준비만 하다 시작할 타이밍을 놓치지 않도록 실행력을 함께 키우는 것이 좋습니다.'
   };
 
   const ORGAN_MAP = {
@@ -1110,91 +1148,165 @@
     수: '신장·방광(수분 대사와 체력)'
   };
 
-  const NEEDED_ELEMENT_TIP = {
-    목: '초록·청색 계열의 색을 가까이 하고, 아침에 산책하거나 화분을 가꾸는 등 동쪽·성장의 기운을 더하는 활동',
-    화: '빨강·주황 계열의 색을 가까이 하고, 몸을 움직이는 운동이나 사람들과 어울리는 활동으로 활력을 더하는 것',
-    토: '노랑·갈색 계열의 색을 가까이 하고, 규칙적인 식사와 정돈된 생활 루틴으로 중심을 잡는 것',
-    금: '흰색·은색 계열의 색을 가까이 하고, 정리정돈과 원칙·계획을 세우는 습관으로 기운을 다잡는 것',
-    수: '검정·남색 계열의 색을 가까이 하고, 충분한 휴식과 수분 섭취, 독서·명상처럼 차분한 활동'
+  const HEALTH_TIP = {
+    목: '스트레칭이나 가벼운 산책으로 근육과 눈의 피로를 자주 풀어주고, 화를 오래 담아두지 않는 것이 도움이 됩니다.',
+    화: '무리하게 스스로를 몰아붙이기보다 규칙적인 수면과 휴식으로 심장과 혈액순환에 부담을 줄여주는 것이 좋습니다.',
+    토: '급하게 먹거나 스트레스성 폭식을 피하고, 정해진 시간에 식사하는 습관으로 소화 기능을 지켜주는 것이 좋습니다.',
+    금: '건조한 환경을 피하고 충분한 수분 섭취와 깊은 호흡으로 호흡기와 피부 건강을 챙기는 것이 도움이 됩니다.',
+    수: '무리한 다이어트나 과로를 피하고, 몸을 따뜻하게 유지하며 충분한 수면으로 신장과 체력을 보충하는 것이 좋습니다.'
   };
 
-  function buildReadingSections(name, gender, p, dayElement, dayStemName, counts, tg){
+  const NEEDED_ELEMENT_TIP = {
+    목: '초록·청색 계열의 색을 가까이 하고, 아침에 산책하거나 화분을 가꾸는 등 동쪽·성장의 기운을 더하는 활동, 그리고 신맛이 나는 음식(레몬, 매실 등)을 즐기는 것',
+    화: '빨강·주황 계열의 색을 가까이 하고, 몸을 움직이는 운동이나 사람들과 어울리는 활동으로 활력을 더하는 것, 그리고 따뜻한 성질의 음식을 즐기는 것',
+    토: '노랑·갈색 계열의 색을 가까이 하고, 규칙적인 식사와 정돈된 생활 루틴으로 중심을 잡는 것, 그리고 곡류와 단맛이 은은한 음식(고구마, 호박 등)을 즐기는 것',
+    금: '흰색·은색 계열의 색을 가까이 하고, 정리정돈과 원칙·계획을 세우는 습관으로 기운을 다잡는 것, 그리고 흰색 재료(무, 배, 마늘 등)의 음식을 즐기는 것',
+    수: '검정·남색 계열의 색을 가까이 하고, 충분한 휴식과 수분 섭취, 독서·명상처럼 차분한 활동, 그리고 검은콩·미역 같은 짙은 색 음식을 즐기는 것'
+  };
+
+  /* 일지(배우자궁)가 일간과 맺는 십성 관계에 따른 배우자운 풀이 */
+  const SPOUSE_PALACE_TEXT = {
+    비겁: '일지가 비겁의 자리라, 배우자는 나와 성향이 비슷하거나 친구 같은 편안한 사이가 되기 쉽습니다. 취향과 리듬이 잘 맞아 대화가 잘 통하는 편이지만, 둘 다 자기주장이 강해질 수 있어 한쪽이 먼저 양보하는 습관을 들이면 관계가 더 안정됩니다.',
+    식상: '일지가 식상의 자리라, 배우자는 표현이 풍부하고 활동적인 성향일 가능성이 높습니다. 함께 있을 때 대화가 끊이지 않고 생활에 활기가 생기는 편이지만, 서로의 사생활과 자유를 존중하는 균형이 필요합니다.',
+    재성: '일지가 재성의 자리라, 배우자와의 관계에서 실질적인 생활력과 안정감을 중요하게 여기는 편입니다. 함께 살림과 미래를 현실적으로 계획하고 관리할 때 신뢰가 쌓이는 궁합입니다.',
+    관성: '일지가 관성의 자리라, 배우자는 책임감 있고 든든한 존재로 다가오는 경우가 많습니다. 관계 안에서 역할과 기준이 잘 잡혀 있을 때 편안함을 느끼는 편이지만, 지나치게 통제하려 들면 답답함을 느낄 수 있어 서로 숨 쉴 공간을 남겨두는 것이 좋습니다.',
+    인성: '일지가 인성의 자리라, 배우자에게서 배우거나 의지하고 싶은 마음이 자연스럽게 드는 편입니다. 서로를 다독이고 성장시켜주는 관계가 되기 쉽지만, 한쪽에게만 기대지 않도록 균형을 잡는 것이 좋습니다.'
+  };
+
+  /* 월주(부모궁)가 일간과 맺는 십성 관계에 따른 부모·성장환경 풀이 */
+  const PARENT_PALACE_TEXT = {
+    비겁: '월주가 비겁에 해당해, 부모님과 비슷한 기질을 공유하거나 어려서부터 독립적으로 자기 몫을 챙기며 자란 환경이었을 가능성이 있습니다.',
+    식상: '월주가 식상에 해당해, 자유롭고 표현을 존중하는 분위기의 가정에서 자랐을 가능성이 있습니다. 규율보다 대화와 소통이 중심이 되는 환경이었을 수 있습니다.',
+    재성: '월주가 재성에 해당해, 실용적이고 현실적인 가풍 속에서 자랐을 가능성이 있습니다. 어려서부터 자연스럽게 경제관념을 익히게 되는 환경이었을 수 있습니다.',
+    관성: '월주가 관성에 해당해, 규율과 기준이 뚜렷한 가정 환경의 영향을 받았을 가능성이 있습니다. 책임감을 중요하게 여기는 분위기 속에서 성장했을 수 있습니다.',
+    인성: '월주가 인성에 해당해, 배움과 보살핌을 중요하게 여기는 가정 분위기에서 자랐을 가능성이 있습니다. 부모님의 관심과 지원을 비교적 든든하게 받았을 수 있습니다.'
+  };
+
+  /* 십성 카테고리별 흐름 풀이: 올해의 흐름(year)과 대운 흐름(daeyun)에서 함께 사용 */
+  const FLOW_BY_TENGOD = {
+    비겁: {
+      year: '본인과 같은 기운이 강해지는 해라, 스스로 주도권을 쥐고 움직일 힘이 커집니다. 다만 고집이 세지기 쉬우니 협업에서는 의견을 조율하는 유연함이 필요합니다.',
+      daeyun: '본인과 같은 기운이 강해지는 시기로, 독립심과 추진력이 커지는 흐름입니다. 새로운 도전이나 독립적인 시작을 하기에 좋은 흐름이지만, 협업과 관계에서는 유연함을 잃지 않는 것이 중요합니다.'
+    },
+    식상: {
+      year: '표현하고 확장하려는 기운이 강해지는 해입니다. 새로운 시도나 자기 PR에 유리한 흐름이니 적극적으로 움직여볼 만합니다.',
+      daeyun: '표현력과 확장력이 커지는 시기로, 새로운 시도와 활동 반경을 넓히기에 좋은 흐름입니다. 다만 벌여놓은 일을 끝까지 마무리하는 뒷심이 함께 필요합니다.'
+    },
+    재성: {
+      year: '결과와 성과를 만들어내는 기운이 강해지는 해입니다. 다만 씀씀이도 함께 커질 수 있어 재정 관리에 신경 쓰면 좋습니다.',
+      daeyun: '실질적인 성과와 재물의 흐름이 활발해지는 시기입니다. 기회를 잡아 성장할 가능성이 크지만, 커진 씀씀이를 관리하는 재정 계획을 함께 세워두는 것이 좋습니다.'
+    },
+    관성: {
+      year: '책임과 역할이 커지는 해입니다. 부담스럽게 느껴질 수 있지만, 그만큼 인정받고 성장할 기회이기도 합니다.',
+      daeyun: '책임과 역할이 커지는 시기로, 조직이나 사회적 위치에서 인정받을 기회가 늘어나는 흐름입니다. 다만 부담이 커지는 만큼 스스로를 돌보는 시간도 함께 챙겨야 합니다.'
+    },
+    인성: {
+      year: '배우고 채우는 기운이 강해지는 해입니다. 공부, 자격, 새로운 지식을 쌓기에 유리한 흐름입니다.',
+      daeyun: '배우고 준비하는 기운이 강해지는 시기로, 공부나 자격 취득, 내실을 다지는 데 유리한 흐름입니다. 이 시기에 쌓은 것들이 다음 흐름에서 좋은 결실로 이어지는 경우가 많습니다.'
+    }
+  };
+
+  function buildReadingSections(name, gender, p, dayElement, dayStemName, counts, tg, Y, M, D){
     const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
     const strongest = sorted[0];
     const weakest = sorted.filter(([,c]) => c === 0).map(([k]) => k);
     const tgSorted = Object.entries(tg).sort((a,b) => b[1]-a[1]);
     const tgTop = tgSorted[0][0];
+    const tgSecond = (tgSorted[1] && tgSorted[1][1] > 0 && tgSorted[1][0] !== tgTop) ? tgSorted[1][0] : null;
 
     const sections = [];
 
-    // 총평
+    // 1. 총평
     let overview = name + '님은 일간 ' + dayStemName + '(' + dayElement + ') 사주로, 여덟 글자 중 ' + strongest[0] + ' 기운이 가장 강하게 자리하고 있습니다.';
     overview += weakest.length ? (' 반대로 ' + weakest.join(', ') + ' 기운은 겉으로 드러나지 않아 상대적으로 약한 구조입니다.') : ' 오행이 비교적 고르게 분포된 편입니다.';
     overview += ' 십성으로는 ' + tgTop + '이(가) 가장 두드러져, ' + TENGOD_TENDENCY[tgTop];
+    overview += p.hour ? ' 시주까지 함께 살펴본 결과로, 인생 전반과 후반의 흐름을 비교적 폭넓게 짚어볼 수 있는 사주입니다.' : ' 다만 태어난 시간이 반영되지 않아, 인생 후반부와 자녀운에 관한 부분은 제한적으로만 참고할 수 있는 점을 감안해 주세요.';
+    const overviewKeyword = tgTop === '비겁' ? '자기 주도적인 색깔이 뚜렷한' : tgTop === '식상' ? '표현력과 확장성이 돋보이는' : tgTop === '재성' ? '현실 감각과 실행력이 강한' : tgTop === '관성' ? '책임감과 안정 지향이 강한' : '배움과 준비성이 돋보이는';
+    overview += ' 이 사주를 한마디로 정리하면, ' + dayStemName + ' 일간 특유의 기질에 ' + tgTop + ' 기운이 더해져 ' + overviewKeyword + ' 삶의 결을 보여줍니다.';
     sections.push({ emoji:'🌙', title:'전체 사주 총평', text: overview });
 
-    // 타고난 성향
-    sections.push({ emoji:'✨', title:'타고난 성향', text: DAY_MASTER_TEXT[dayStemName] + ' 여기에 ' + tgTop + ' 기운까지 더해져, ' + TENGOD_TENDENCY[tgTop] });
+    // 2. 타고난 성향
+    let personality = DAY_MASTER_TEXT[dayStemName] + ' 여기에 ' + tgTop + ' 기운까지 두드러져, ' + TENGOD_TENDENCY[tgTop];
+    if(tgSecond) personality += ' 그다음으로는 ' + tgSecond + ' 기운도 함께 자리하고 있어, ' + TENGOD_TENDENCY[tgSecond];
+    sections.push({ emoji:'✨', title:'타고난 성향', text: personality });
 
-    // 직업 사업운
+    // 3. 직업 사업운
     let career;
     if(tg.관성 >= tg.식상 && tg.관성 >= tg.비겁 && tg.관성 >= tg.재성 && tg.관성 >= tg.인성){
-      career = '관성이 두드러져 조직 안에서 책임을 맡고 인정받는 방식이 잘 맞습니다. 관리자, 전문직, 공공성이 있는 일에서 강점을 보이는 구조입니다.';
+      career = '관성이 두드러져 조직 안에서 책임을 맡고 인정받는 방식이 잘 맞습니다. 관리자, 공무원, 법조·행정처럼 공공성이 있는 일이나 규칙과 체계가 분명한 전문직에서 강점을 보이는 구조입니다. 정해진 역할과 책임 안에서 꾸준히 신뢰를 쌓아가는 방식이 잘 맞고, 승진이나 직급 상승을 통한 성취에서 큰 만족을 느끼는 편입니다. 다만 위계와 규칙에만 지나치게 얽매이면 숨이 막힐 수 있으니, 스스로 재량을 발휘할 수 있는 영역을 조금씩 넓혀가는 것도 좋습니다.';
     } else if(tg.식상 >= tg.비겁 && tg.식상 >= tg.재성 && tg.식상 >= tg.인성){
-      career = '식상이 두드러져 틀에 갇히기보다 자기 아이디어와 표현력을 발휘하는 일에서 빛을 발합니다. 기획, 창작, 영업처럼 능동적으로 움직이는 분야가 잘 맞습니다.';
+      career = '식상이 두드러져 틀에 갇히기보다 자기 아이디어와 표현력을 발휘하는 일에서 빛을 발합니다. 기획, 콘텐츠 제작, 마케팅, 강의, 영업처럼 능동적으로 움직이고 사람들과 소통하는 분야가 잘 맞고, 새로운 흐름을 빠르게 캐치하는 감각이 강점입니다. 반복적이고 정형화된 업무보다 변화가 있는 환경에서 오히려 더 큰 힘을 냅니다. 다만 다양한 아이디어에 마음이 흩어지기 쉬우니, 하나의 프로젝트를 끝까지 완성하는 습관을 들이면 성과가 훨씬 단단해집니다.';
     } else if(tg.비겁 >= tg.재성 && tg.비겁 >= tg.인성){
-      career = '비겁이 두드러져 혼자 주도권을 쥐고 밀어붙이는 힘이 강합니다. 독립적인 업무나 자기 사업에 도전할 때 저력이 나오지만, 협업에서는 의견 조율에 마음을 열어두는 것이 좋습니다.';
+      career = '비겁이 두드러져 혼자 주도권을 쥐고 밀어붙이는 힘이 강합니다. 독립적인 업무나 자기 사업, 프리랜서처럼 스스로 결정하고 책임지는 구조에서 저력이 나오는 편이고, 경쟁이 있는 환경에서 오히려 승부욕이 발휘됩니다. 다만 협업이 필요한 자리에서는 의견을 조율하고 남의 몫을 인정하는 태도가 필요하며, 이 부분만 보완하면 리더로서의 자질이 한층 더 빛을 발합니다.';
     } else if(tg.인성 >= tg.재성){
-      career = '인성이 두드러져 배우고 준비하는 과정에서 힘을 얻는 편입니다. 전문지식을 쌓는 학문, 연구, 자격 기반의 일이 잘 맞습니다.';
+      career = '인성이 두드러져 배우고 준비하는 과정에서 힘을 얻는 편입니다. 전문지식을 쌓는 학문, 연구, 교육, 자격증 기반의 전문직처럼 꾸준한 학습이 자산이 되는 분야가 잘 맞고, 신뢰를 바탕으로 오랜 시간에 걸쳐 실력을 인정받는 구조입니다. 다만 완벽하게 준비된 다음에 시작하려는 습관 때문에 기회를 늦게 잡을 수 있으니, 어느 정도 준비되면 우선 시도해보는 용기도 함께 필요합니다.';
     } else {
-      career = '재성이 두드러져 성과와 결과를 눈으로 확인할 수 있는 일에서 동기부여가 큽니다. 영업, 재무, 사업처럼 실리를 다루는 분야에 강점이 있습니다.';
+      career = '재성이 두드러져 성과와 결과를 눈으로 확인할 수 있는 일에서 동기부여가 큽니다. 영업, 재무, 유통, 사업처럼 실리를 다루는 분야에서 강점을 보이고, 숫자와 결과로 자신의 능력을 증명하는 것을 선호하는 편입니다. 기회를 포착하는 감각이 좋아 실행에 옮기는 속도도 빠릅니다. 다만 눈앞의 이익에만 집중하다 큰 그림을 놓칠 수 있으니, 장기적인 계획을 함께 세워두면 좋습니다.';
     }
     sections.push({ emoji:'💼', title:'직업·사업운', text: career });
 
-    // 재물운
+    // 4. 재물운
     let wealth;
     if(tg.재성 === 0){
-      wealth = '여덟 글자 안에 재성이 뚜렷하지 않아, 재물이 크게 들어오고 나가기보다 꾸준히 관리하는 편이 잘 맞는 구조입니다. 충동적인 지출보다 계획적인 저축 습관을 들이면 도움이 됩니다.';
+      wealth = '여덟 글자 안에 재성이 뚜렷하지 않아, 재물이 크게 들어오고 나가기보다 꾸준히 관리하는 편이 잘 맞는 구조입니다. 큰돈을 빠르게 좇기보다 안정적인 소득원을 착실히 쌓아가는 방식이 이 사주와 잘 맞습니다. 충동적인 지출이나 위험 부담이 큰 투자보다, 정기적인 저축과 계획적인 소비 습관을 들이면 시간이 지날수록 탄탄한 재정 기반을 만들 수 있습니다.';
     } else if(tg.재성 <= 2){
-      wealth = '재성이 안정적으로 자리해 재물운이 무난하게 흐르는 편입니다. 무리한 확장보다 하나씩 착실히 쌓아가는 방식이 잘 맞습니다.';
+      wealth = '재성이 안정적으로 자리해 재물운이 무난하게 흐르는 편입니다. 벌이가 극적으로 크지는 않아도 꾸준히 들어오고 나가는 흐름이 유지되는 구조이며, 무리한 확장보다 하나씩 착실히 쌓아가는 방식이 잘 맞습니다. 중간중간 소소한 지출 계획을 세워두면 저축과 여유 자금을 함께 관리하기 좋습니다.';
     } else {
-      wealth = '재성이 여러 개 자리해 재물의 흐름이 활발한 구조입니다. 다만 씀씀이도 함께 커질 수 있는 만큼, 지출을 기록하고 관리하는 습관을 들이는 것이 좋습니다.';
+      wealth = '재성이 여러 개 자리해 재물의 흐름이 활발한 구조입니다. 다양한 수입원을 만들거나 기회가 왔을 때 놓치지 않고 잡는 감각이 있어 재물이 붙는 편이지만, 그만큼 씀씀이도 함께 커질 수 있습니다. 지출을 기록하고 관리하는 습관, 그리고 들어온 돈의 일부를 먼저 떼어 저축하는 원칙을 세워두면 커진 흐름을 안정적으로 지킬 수 있습니다.';
     }
     sections.push({ emoji:'💰', title:'재물운', text: wealth });
 
-    // 연애 결혼운
+    // 5. 연애 결혼운
     let love;
     if(gender === '남성'){
-      if(tg.재성 === 0) love = '배우자 자리를 상징하는 재성이 뚜렷하지 않아, 인연은 서두르기보다 편안하게 스며들듯 찾아오는 편입니다. 조급해하지 않는 태도가 오히려 좋은 인연으로 이어질 수 있습니다.';
-      else if(tg.재성 <= 2) love = '재성이 안정적으로 자리해, 관계에서도 신뢰를 바탕으로 한 꾸준한 만남을 선호하는 편입니다.';
-      else love = '재성이 여럿이라 관계를 맺을 인연의 폭이 넓어질 수 있습니다. 다만 그만큼 한 사람에게 마음을 오래 두는 연습이 필요한 구조이기도 합니다.';
+      if(tg.재성 === 0) love = '배우자 자리를 상징하는 재성이 뚜렷하지 않아, 인연은 서두르기보다 편안하게 스며들듯 찾아오는 편입니다. 적극적으로 이 사람 저 사람을 만나기보다, 자연스러운 만남 속에서 인연이 무르익는 구조이니 조급해하지 않는 태도가 오히려 좋은 인연으로 이어질 수 있습니다.';
+      else if(tg.재성 <= 2) love = '재성이 안정적으로 자리해, 관계에서도 신뢰를 바탕으로 한 꾸준한 만남을 선호하는 편입니다. 화려한 이벤트보다 함께 시간을 쌓아가는 과정에서 마음을 여는 편이라, 오래 지켜봐 온 사람과의 인연이 좋은 결실로 이어지기 쉽습니다.';
+      else love = '재성이 여럿이라 관계를 맺을 인연의 폭이 넓어질 수 있습니다. 매력을 느끼는 상대가 다양하게 나타날 수 있는 구조인 만큼, 그중 한 사람에게 마음을 오래 두고 깊이를 쌓는 연습을 하면 관계가 훨씬 안정적으로 자리 잡습니다.';
     } else if(gender === '여성'){
-      if(tg.관성 === 0) love = '배우자 자리를 상징하는 관성이 뚜렷하지 않아, 인연은 서두르기보다 마음이 편한 사람에게서 자연스럽게 찾아오는 편입니다.';
-      else if(tg.관성 <= 2) love = '관성이 안정적으로 자리해, 든든하고 책임감 있는 상대에게 끌리며 관계에서 안정감을 중요하게 여기는 편입니다.';
-      else love = '관성이 여럿이라 관계에서 기대하는 기준이 높아지기 쉬운 구조입니다. 상대에게 완벽을 요구하기보다 서로 다름을 인정하는 여유가 도움이 됩니다.';
+      if(tg.관성 === 0) love = '배우자 자리를 상징하는 관성이 뚜렷하지 않아, 인연은 서두르기보다 마음이 편한 사람에게서 자연스럽게 찾아오는 편입니다. 조건을 재기보다 함께 있을 때 편안한지를 기준으로 삼으면 더 좋은 인연을 알아보기 쉽습니다.';
+      else if(tg.관성 <= 2) love = '관성이 안정적으로 자리해, 든든하고 책임감 있는 상대에게 끌리며 관계에서 안정감을 중요하게 여기는 편입니다. 서로에 대한 예의와 신뢰가 바탕이 될 때 관계가 오래 지속되는 구조입니다.';
+      else love = '관성이 여럿이라 관계에서 기대하는 기준이 높아지기 쉬운 구조입니다. 여러 인연 사이에서 고민이 깊어질 수도 있지만, 상대에게 완벽을 요구하기보다 서로 다름을 인정하는 여유를 가지면 관계가 한결 편안해집니다.';
     } else {
-      love = '관성 ' + tg.관성 + '개, 재성 ' + tg.재성 + '개로, 관계에서 책임감(관성)과 현실적 유대(재성)를 함께 참고할 수 있는 구조입니다. 어느 한쪽이 뚜렷하면 그 기운의 성향이 관계 방식에 더 크게 반영되는 편입니다.';
+      love = '관성 ' + tg.관성 + '개, 재성 ' + tg.재성 + '개로, 관계에서 책임감(관성)과 현실적 유대(재성)를 함께 참고할 수 있는 구조입니다. 어느 한쪽이 뚜렷하면 그 기운의 성향이 관계 방식에 더 크게 반영되는 편이며, 두 기운이 비슷하다면 안정과 실리를 함께 중요하게 여기는 균형 잡힌 연애관을 가진 편입니다.';
     }
     sections.push({ emoji:'❤️', title:'연애·결혼운', text: love });
 
-    // 인간관계
+    // 6. 배우자운 (일지 = 배우자궁)
+    const dayBranchElement = BRANCH_ELEMENT[p.day.branch];
+    const spouseCategory = tenGodCategory(dayElement, dayBranchElement);
+    const spouse = SPOUSE_PALACE_TEXT[spouseCategory] + ' 이는 배우자궁(일지)을 기준으로 본 참고용 풀이이며, 실제 궁합은 두 사람의 사주를 함께 봐야 더 정확하게 알 수 있습니다.';
+    sections.push({ emoji:'💍', title:'배우자운', text: spouse });
+
+    // 7. 가족운 (형제 + 부모궁)
+    let siblingText;
+    if(tg.비겁 === 0) siblingText = '비겁이 보이지 않아, 형제자매보다는 혼자 헤쳐나가는 힘이 강한 구조입니다. 가까운 동료나 친구가 형제 같은 역할을 대신해 줄 수 있습니다.';
+    else if(tg.비겁 <= 2) siblingText = '비겁이 적당히 자리해, 형제자매나 또래와 무난하게 협력하는 관계를 맺는 편입니다. 큰 갈등 없이 서로의 영역을 존중하며 지내는 구조입니다.';
+    else siblingText = '비겁이 여럿이라 형제자매나 또래 관계가 활발한 구조입니다. 다만 그만큼 서로 주도권을 두고 부딪힐 수 있어, 양보하고 배려하는 태도를 의식적으로 가지면 관계가 더 편안해집니다.';
+    const monthStemElement = STEM_ELEMENT[p.month.stem];
+    const parentCategory = tenGodCategory(dayElement, monthStemElement);
+    const family = siblingText + ' ' + PARENT_PALACE_TEXT[parentCategory];
+    sections.push({ emoji:'👨‍👩‍👧', title:'가족운 (형제·부모)', text: family });
+
+    // 8. 인간관계
     let relation;
-    if(tg.비겁 === 0) relation = '비겁이 드러나지 않아 또래나 동료보다 웃어른, 스승 같은 존재와의 인연이 더 편안하게 느껴질 수 있습니다.';
-    else if(tg.비겁 <= 2) relation = '가까운 사람에게는 곁을 잘 내어주지만, 낯선 관계는 천천히 여는 편입니다.';
-    else relation = '친구나 동료와 폭넓게 어울리는 힘이 있고, 사람들 사이에서 중심 역할을 맡을 때가 많습니다. 다만 의견이 부딪힐 때는 한발 물러서는 여유도 필요합니다.';
+    if(tg.식상 >= 3) relation = '식상이 발달해 사람들과 스스럼없이 어울리고 먼저 다가가는 힘이 있습니다. 대화를 주도하고 분위기를 이끄는 역할을 자주 맡게 되며, 다양한 사람들과 폭넓게 관계를 맺는 편입니다.';
+    else if(tg.식상 === 0) relation = '식상이 드러나지 않아, 넓은 인맥보다 소수의 깊은 관계를 선호하는 편입니다. 말을 앞세우기보다 행동으로 신뢰를 보여주는 스타일이라 시간이 걸려도 단단한 관계를 만듭니다.';
+    else relation = '필요할 때는 적극적으로 다가가고, 아닐 때는 한발 물러서는 균형 잡힌 인간관계를 맺는 편입니다.';
+    relation += tg.관성 >= 3 ? ' 관성이 강해 사람들 사이에서 예의와 선을 지키는 편이라 신뢰를 얻지만, 지나치게 격식을 차리다 보면 거리감이 느껴질 수 있어 편안함을 더하는 것도 좋습니다.' : ' 격식보다는 편안한 분위기 속에서 관계를 맺는 것을 선호하는 편입니다.';
     sections.push({ emoji:'🤝', title:'인간관계', text: relation });
 
-    // 건강 생활습관
+    // 9. 건강 생활습관
     let health;
     if(weakest.length){
       const organs = weakest.map(el => el + '(' + ORGAN_MAP[el] + ')').join(', ');
-      health = '전통 오행 관점에서 ' + organs + ' 쪽 기운이 상대적으로 약한 구조로 봅니다. 평소 이 부분을 챙기는 생활 습관을 들이면 좋습니다. 다만 이는 전통적 상징일 뿐 의학적 진단이 아니므로, 실제 건강 문제는 반드시 전문의와 상담해 주세요.';
+      const tips = weakest.map(el => HEALTH_TIP[el]).join(' ');
+      health = '전통 오행 관점에서 ' + organs + ' 쪽 기운이 상대적으로 약한 구조로 봅니다. ' + tips + ' 다만 이는 전통적 상징일 뿐 의학적 진단이 아니므로, 실제 건강 문제는 반드시 전문의와 상담해 주세요.';
     } else {
-      health = '오행이 고르게 갖춰져 있어 특정 장부보다는 전반적으로 규칙적인 생활 리듬을 유지하는 것이 핵심입니다. 다만 이는 전통적 상징일 뿐 의학적 진단이 아닙니다.';
+      health = '오행이 고르게 갖춰져 있어 특정 장부보다는 전반적으로 규칙적인 생활 리듬을 유지하는 것이 핵심입니다. 무리한 다이어트나 과로, 불규칙한 수면을 피하고 몸이 보내는 신호에 귀 기울이는 습관을 들이면 좋습니다. 다만 이는 전통적 상징일 뿐 의학적 진단이 아닙니다.';
     }
     sections.push({ emoji:'🌿', title:'건강·생활습관', text: health });
 
-    // 올해의 흐름
+    // 10. 올해의 흐름
     const now = new Date();
     const curSajuYear = getSajuYear(now.getFullYear(), now.getMonth()+1, now.getDate());
     const curYearStemIdx = mod(curSajuYear - 4, 10);
@@ -1202,20 +1314,27 @@
     const curYearLabel = STEMS[curYearStemIdx] + BRANCHES[curYearBranchIdx];
     const curYearElement = STEM_ELEMENT[curYearStemIdx];
     const curCategory = tenGodCategory(dayElement, curYearElement);
-    const YEAR_FLOW = {
-      비겁: '본인과 같은 기운이 강해지는 해라, 스스로 주도권을 쥐고 움직일 힘이 커집니다. 다만 고집이 세지기 쉬우니 협업에서는 의견을 조율하는 유연함이 필요합니다.',
-      식상: '표현하고 확장하려는 기운이 강해지는 해입니다. 새로운 시도나 자기 PR에 유리한 흐름이니 적극적으로 움직여볼 만합니다.',
-      재성: '결과와 성과를 만들어내는 기운이 강해지는 해입니다. 다만 씀씀이도 함께 커질 수 있어 재정 관리에 신경 쓰면 좋습니다.',
-      관성: '책임과 역할이 커지는 해입니다. 부담스럽게 느껴질 수 있지만, 그만큼 인정받고 성장할 기회이기도 합니다.',
-      인성: '배우고 채우는 기운이 강해지는 해입니다. 공부, 자격, 새로운 지식을 쌓기에 유리한 흐름입니다.'
-    };
-    const yearFlow = curSajuYear + '년은 ' + curYearLabel + '년(' + curYearElement + ' 기운)입니다. ' + YEAR_FLOW[curCategory];
+    const yearFlow = curSajuYear + '년은 ' + curYearLabel + '년(' + curYearElement + ' 기운)입니다. ' + FLOW_BY_TENGOD[curCategory].year;
     sections.push({ emoji:'🔮', title:'올해의 흐름', text: yearFlow });
 
-    // 필요한 기운
+    // 11. 대운 흐름 (10년 주기)
+    const daeyunInfo = computeDaeyunPeriods(p, gender, Y, M, D);
+    let daeyunText = '대운은 월주를 기준으로 10년마다 삶의 큰 배경이 바뀌는 흐름입니다. 이 사주는 태어난 해의 간지 음양과 성별을 기준으로 ' + (daeyunInfo.forward ? '순행(順行)' : '역행(逆行)') + '하는 구조로 계산됩니다.';
+    if(daeyunInfo.genderAssumed) daeyunText += ' (성별을 선택하지 않아 방향은 참고용으로만 봐주세요.)';
+    daeyunText += ' 정확한 대운 시작 나이는 태어난 시각까지 반영한 절기 계산이 필요해, 아래 나이는 절기를 근사한 값(고정 절입일 기준)으로 계산한 참고용 나이대입니다.<br><br>';
+    const daeyunLines = daeyunInfo.periods.map(period => {
+      const el = STEM_ELEMENT[period.stem];
+      const cat = tenGodCategory(dayElement, el);
+      const label = STEMS[period.stem] + BRANCHES[period.branch];
+      return '만 ' + period.startAge + '세 무렵부터 — ' + label + '(' + el + ' · ' + cat + ') : ' + FLOW_BY_TENGOD[cat].daeyun;
+    });
+    daeyunText += daeyunLines.join('<br><br>');
+    sections.push({ emoji:'🌊', title:'대운 흐름 (10년 주기)', text: daeyunText });
+
+    // 12. 필요한 기운
     const neededEls = weakest.length ? weakest : [sorted[sorted.length-1][0]];
     const neededText = neededEls.map(el => el + ' — ' + NEEDED_ELEMENT_TIP[el]).join(' / ');
-    sections.push({ emoji:'🧭', title:'당신에게 필요한 기운', text: '지금 사주에서 상대적으로 부족한 기운은 ' + neededEls.join(', ') + '입니다. ' + neededText + '을(를) 생활 속에 조금씩 들여보면 균형을 채우는 데 도움이 됩니다.' });
+    sections.push({ emoji:'🧭', title:'당신에게 필요한 기운', text: '지금 사주에서 상대적으로 부족한 기운은 ' + neededEls.join(', ') + '입니다. ' + neededText + '을(를) 생활 속에 조금씩 들여보면 균형을 채우는 데 도움이 됩니다. 거창하게 바꾸기보다, 하루 중 작은 습관 하나를 이 기운과 연결 지어 실천해보는 것부터 시작해보세요.' });
 
     return sections;
   }
@@ -1340,7 +1459,7 @@
       const tg = computeTenGodCounts(p, dayElement);
       const readingList = document.getElementById('readingList');
       readingList.innerHTML = '';
-      buildReadingSections(name, gender, p, dayElement, dayStemName, counts, tg).forEach(sec => {
+      buildReadingSections(name, gender, p, dayElement, dayStemName, counts, tg, Y, M, D).forEach(sec => {
         const item = document.createElement('div');
         item.className = 'reading-item';
         item.innerHTML = '<div class="r-title"><span>' + sec.emoji + '</span><span>' + sec.title + '</span></div><p>' + sec.text + '</p>';
@@ -1508,44 +1627,56 @@
   const DEFAULT_HERO_IMG = document.getElementById('heroImg').getAttribute('src');
 
   /* ---------- Firebase 설정 ----------
-     1) https://console.firebase.google.com 에서 새 프로젝트를 만듭니다. (무료 Spark 요금제로 충분합니다 · 카드 등록 불필요)
-     2) 왼쪽 메뉴 "빌드 > Firestore Database"에서 데이터베이스를 만듭니다. (테스트 모드로 시작해도 됩니다)
-     3) 프로젝트 설정(톱니바퀴 아이콘) > 내 앱 > "</> 웹 앱 추가"를 누르면 나오는 설정값을 아래 firebaseConfig에 붙여넣습니다.
-     4) Firestore > 규칙(Rules) 탭에서 아래처럼 site/config 문서만 열어줍니다.
-        (누구나 쓸 수 있게 되므로, 실제 운영 시에는 관리자 인증(Firebase Auth) 등을 추가해 쓰기 권한을 제한하는 것을 권장합니다)
+     Firebase 콘솔(내 앱 > 웹 앱) 설정값을 그대로 사용합니다. Firestore Database를
+     "빌드 > Firestore Database"에서 만들어 두어야 하며, Firestore > 규칙(Rules) 탭에서
+     아래처럼 site/config 문서만 열어줘야 저장이 실제로 동작합니다.
+     (누구나 쓸 수 있게 되므로, 실제 운영 시에는 Firebase Auth 등으로 쓰기 권한을 제한하는 것을 권장합니다)
 
-          rules_version = '2';
-          service cloud.firestore {
-            match /databases/{database}/documents {
-              match /site/config {
-                allow read: if true;
-                allow write: if true;
-              }
-            }
-          }
+       rules_version = '2';
+       service cloud.firestore {
+         match /databases/{database}/documents {
+           match /site/config {
+             allow read: if true;
+             allow write: if true;
+           }
+         }
+       }
 
      ※ Firebase Storage(파일 저장 전용 서비스)는 2024년 10월부터 유료(Blaze) 요금제가 있어야 사용할 수 있게 되었습니다.
        그래서 이 코드는 Storage 없이, 무료 Spark 요금제로도 쓸 수 있는 Firestore만으로 동작합니다.
        배경 이미지는 저장하기 전에 자동으로 압축해서 Firestore 문서(문서당 최대 1MB) 안에 함께 저장합니다.
   ------------------------------------ */
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyACo_98OB2xAFPVfdY94tnr6HnZxRHLcvQ",
+    authDomain: "saju-75b48.firebaseapp.com",
+    projectId: "saju-75b48",
+    storageBucket: "saju-75b48.firebasestorage.app",
+    messagingSenderId: "719868843812",
+    appId: "1:719868843812:web:20b80d71ec8850a9a485b1",
+    measurementId: "G-CHH5YX8B12"
   };
 
   let fbDb = null;
+  let fbConfigDocRef = null;
   let fbReady = false;
+  let fbDocFns = null; // { doc, getDoc, setDoc, updateDoc, deleteField }
   try{
-    if(typeof firebase !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey !== 'YOUR_API_KEY'){
-      firebase.initializeApp(firebaseConfig);
-      fbDb = firebase.firestore();
-      fbReady = true;
-    } else {
-      console.warn('firebaseConfig가 채워지지 않아 Firebase 없이 동작합니다. (로컬 저장으로 대체)');
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+    const firestoreMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const { getFirestore, doc, getDoc, setDoc, updateDoc, deleteField } = firestoreMod;
+
+    const fbApp = initializeApp(firebaseConfig);
+    fbDb = getFirestore(fbApp);
+    fbConfigDocRef = doc(fbDb, 'site', 'config');
+    fbDocFns = { getDoc, setDoc, updateDoc, deleteField };
+    fbReady = true;
+
+    // Google Analytics는 선택 사항이라, 실패해도 저장 기능에는 영향이 없도록 별도로 감쌉니다.
+    try{
+      const { getAnalytics } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js");
+      getAnalytics(fbApp);
+    }catch(analyticsErr){
+      console.warn('Firebase Analytics는 초기화하지 않았습니다(선택 기능):', analyticsErr);
     }
   }catch(e){
     console.warn('Firebase 초기화에 실패했습니다. 로컬 저장으로 대체합니다.', e);
@@ -1555,7 +1686,6 @@
   /* 저장 방식: 1) Firebase Firestore(공유, 무료) 2) 이 브라우저의 localStorage 3) 그것도 안되면 이번 접속에서만 유지 */
   const memoryStore = {};
   let storageMode = 'memory';
-  const FB_DOC = () => fbDb.collection('site').doc('config');
   const fieldKey = (key) => key.replace(/[:.]/g, '_'); // Firestore 필드명에는 콜론/마침표를 피하는 것이 안전합니다
 
   function hasWorkingLocalStorage(){
@@ -1570,7 +1700,7 @@
   async function storageSet(key, value){
     if(fbReady){
       try{
-        await FB_DOC().set({ [fieldKey(key)]: value, updatedAt: Date.now() }, { merge: true });
+        await fbDocFns.setDoc(fbConfigDocRef, { [fieldKey(key)]: value, updatedAt: Date.now() }, { merge: true });
         storageMode = 'firebase';
         return;
       }catch(e){
@@ -1588,9 +1718,9 @@
   async function storageGet(key){
     if(fbReady){
       try{
-        const doc = await FB_DOC().get();
-        if(doc.exists){
-          const v = doc.data()[fieldKey(key)];
+        const snap = await fbDocFns.getDoc(fbConfigDocRef);
+        if(snap.exists()){
+          const v = snap.data()[fieldKey(key)];
           if(typeof v !== 'undefined' && v !== null) return v;
         }
       }catch(e){
@@ -1606,7 +1736,7 @@
   }
   async function storageDelete(key){
     if(fbReady){
-      try{ await FB_DOC().update({ [fieldKey(key)]: firebase.firestore.FieldValue.delete() }); }
+      try{ await fbDocFns.updateDoc(fbConfigDocRef, { [fieldKey(key)]: fbDocFns.deleteField() }); }
       catch(e){ console.warn('Firebase 삭제 실패:', e); }
     }
     if(hasWorkingLocalStorage()){
