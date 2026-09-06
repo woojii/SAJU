@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月華 사주 — 사주팔자 풀이</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box}
+:root{
+  --gold:#ead39b; --gold2:#fff0c5; --ink:#0a1d39; --glass:rgba(7,25,52,.76);
+}
+body{
+  margin:0; min-height:100vh; color:#fff;
+  font-family:'Noto Serif KR',serif;
+  background:#071a35 url("background.png") center top/cover fixed no-repeat;
+}
+body:before{
+  content:""; position:fixed; inset:0; z-index:-1;
+  background:linear-gradient(180deg,rgba(4,16,37,.12),rgba(3,14,32,.35));
+}
+.wrap{width:min(1120px,92%); margin:auto; padding:46px 0 70px}
+.brand{text-align:center; letter-spacing:.28em; color:var(--gold2); font-size:14px}
+h1{text-align:center; font-size:42px; font-weight:500; margin:8px 0 10px}
+.sub{text-align:center;color:#d8dff0;font-size:14px;margin-bottom:34px}
+.panel{
+  width:min(560px,100%); margin:0 auto 34px; padding:28px;
+  background:rgba(5,22,48,.72); border:1px solid rgba(234,211,155,.55);
+  border-radius:18px; box-shadow:0 18px 55px rgba(0,0,0,.28);
+  backdrop-filter:blur(7px);
+}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.field.full{grid-column:1/-1}
+label{display:block;color:#eee5cf;font-size:13px;margin:0 0 7px}
+input,select{
+  width:100%; padding:13px 14px; border-radius:10px;
+  border:1px solid rgba(234,211,155,.35); background:rgba(255,255,255,.07);
+  color:#fff; outline:none; font:inherit;
+}
+select option{color:#111}
+input:focus,select:focus{border-color:var(--gold)}
+button{
+  width:100%; margin-top:20px; padding:14px; border:0; border-radius:10px;
+  background:linear-gradient(135deg,#f4dfaa,#c9a85c); color:#18233b;
+  font:600 16px 'Noto Serif KR',serif; cursor:pointer;
+}
+button:hover{filter:brightness(1.06)}
+.result{display:none}
+.result.show{display:block}
+.result-title{text-align:center;color:var(--gold2);font-size:13px;letter-spacing:.18em;margin-bottom:16px}
+.saju-frame{
+  width:min(780px,100%); margin:auto; padding:32px 26px 30px;
+  border:1px solid rgba(234,211,155,.75); border-radius:24px;
+  background:rgba(5,22,48,.66); backdrop-filter:blur(6px);
+  box-shadow:0 25px 70px rgba(0,0,0,.3);
+}
+.meta{text-align:center;color:#ddd9d0;font-size:14px;margin-bottom:22px}
+.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+.pillar{
+  text-align:center; padding:22px 8px; min-height:195px;
+  border:1px solid rgba(234,211,155,.42); border-radius:15px;
+  background:rgba(3,17,40,.7);
+}
+.pillar small{color:#cfc5aa;letter-spacing:.12em}
+.hanja{font-size:43px;line-height:1.25;margin:16px 0 8px;color:#fff0ca}
+.kor{font-size:13px;color:#d7dbea}
+.desc{text-align:center;color:#c8cfde;font-size:12px;margin-top:22px;line-height:1.8}
+.footer{text-align:center;color:#c6c8d0;font-size:11px;margin-top:24px}
+@media(max-width:650px){
+  .wrap{padding-top:30px} h1{font-size:31px}
+  .grid{grid-template-columns:1fr}.field.full{grid-column:auto}
+  .pillars{grid-template-columns:repeat(2,1fr)}
+}
+
+.detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+.detail-card{padding:20px;border:1px solid rgba(234,211,155,.30);border-radius:14px;background:rgba(3,17,40,.62)}
+.detail-card h3{margin:0 0 10px;color:#f2dfae;font-size:17px;font-weight:500}
+.detail-card p{margin:0;color:#d7dbea;font-size:13px;line-height:1.85}
+.energy{margin-top:18px;padding:18px;border:1px solid rgba(234,211,155,.30);border-radius:14px;background:rgba(3,17,40,.62)}
+.energy h3{margin:0 0 12px;color:#f2dfae;font-size:17px;font-weight:500}
+.bars{display:grid;gap:9px}.barrow{display:grid;grid-template-columns:38px 1fr 35px;gap:8px;align-items:center;font-size:12px;color:#d7dbea}
+.bar{height:7px;border-radius:10px;background:rgba(255,255,255,.11);overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#c8a45c,#f1dfaa);border-radius:10px}
+.tag{display:inline-block;padding:4px 9px;margin:3px;border:1px solid rgba(234,211,155,.35);border-radius:20px;color:#e9ddc0;font-size:11px}
+@media(max-width:650px){.detail-grid{grid-template-columns:1fr}}
+
+.compat-panel{width:min(780px,100%);margin:26px auto 0;padding:28px;background:rgba(5,22,48,.72);border:1px solid rgba(234,211,155,.55);border-radius:18px;backdrop-filter:blur(7px)}
+.section-head{text-align:center;margin-bottom:18px}.section-head h2{font-size:22px;font-weight:500;color:#f4e4b7;margin:0 0 6px}.section-head p{font-size:12px;color:#cdd3df;margin:0}
+.compat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.person-box{padding:18px;border:1px solid rgba(234,211,155,.25);border-radius:14px;background:rgba(3,17,40,.48)}
+.person-box h3{margin:0 0 14px;color:#e9d6a1;font-size:15px;font-weight:500}
+.lifetime{margin-top:18px}.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.life-item{padding:14px 7px;text-align:center;border:1px solid rgba(234,211,155,.25);border-radius:12px;background:rgba(3,17,40,.58)}.life-item strong{display:block;color:#f0dda9;font-size:15px;margin-bottom:7px}.life-item span{font-size:11px;color:#d5d9e4;line-height:1.55}
+.score{font-size:34px;color:#f5e3b1;text-align:center;margin:8px 0}.score small{font-size:13px;color:#cdd3df}
+.compat-result{display:none;margin-top:22px}.compat-result.show{display:block}
+.compat-summary{padding:20px;text-align:center;border:1px solid rgba(234,211,155,.38);border-radius:14px;background:rgba(3,17,40,.62)}
+.compat-summary h3{color:#f1dfa9;font-weight:500;margin:0 0 8px}.compat-summary p{font-size:13px;line-height:1.85;color:#d7dbea;margin:0}
+.compat-details{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}.compat-details .detail-card{margin:0}
+@media(max-width:700px){.compat-grid,.compat-details{grid-template-columns:1fr}.timeline{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">月 華 · SAJU</div>
+  <h1>나의 사주를 열어보다</h1>
+  <div class="sub">이름과 생년월일시를 입력하면 나만의 사주팔자를 확인할 수 있습니다.</div>
+
+  <section class="panel">
+    <div class="grid">
+      <div class="field full">
+        <label>이름</label>
+        <input id="name" placeholder="이름을 입력해주세요">
+      </div>
+      <div class="field">
+        <label>생년월일</label>
+        <input id="birth" type="date">
+      </div>
+      <div class="field">
+        <label>달력</label>
+        <select id="calendar">
+          <option value="solar">양력</option>
+          <option value="lunar">음력</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>태어난 시간</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <select id="ampm"><option value="AM">오전</option><option value="PM">오후</option></select>
+          <select id="hour12">
+            <option value="12">12시</option><option value="1">1시</option><option value="2">2시</option>
+            <option value="3">3시</option><option value="4">4시</option><option value="5">5시</option>
+            <option value="6">6시</option><option value="7">7시</option><option value="8">8시</option>
+            <option value="9">9시</option><option value="10">10시</option><option value="11">11시</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>분</label>
+        <select id="minute">
+          <option value="00">00분</option>
+          <option value="01">01분</option><option value="02">02분</option><option value="03">03분</option><option value="04">04분</option><option value="05">05분</option>
+          <option value="06">06분</option><option value="07">07분</option><option value="08">08분</option><option value="09">09분</option><option value="10">10분</option>
+          <option value="11">11분</option><option value="12">12분</option><option value="13">13분</option><option value="14">14분</option><option value="15">15분</option>
+          <option value="16">16분</option><option value="17">17분</option><option value="18">18분</option><option value="19">19분</option><option value="20">20분</option>
+          <option value="21">21분</option><option value="22">22분</option><option value="23">23분</option><option value="24">24분</option><option value="25">25분</option>
+          <option value="26">26분</option><option value="27">27분</option><option value="28">28분</option><option value="29">29분</option><option value="30">30분</option>
+          <option value="31">31분</option><option value="32">32분</option><option value="33">33분</option><option value="34">34분</option><option value="35">35분</option>
+          <option value="36">36분</option><option value="37">37분</option><option value="38">38분</option><option value="39">39분</option><option value="40">40분</option>
+          <option value="41">41분</option><option value="42">42분</option><option value="43">43분</option><option value="44">44분</option><option value="45">45분</option>
+          <option value="46">46분</option><option value="47">47분</option><option value="48">48분</option><option value="49">49분</option><option value="50">50분</option>
+          <option value="51">51분</option><option value="52">52분</option><option value="53">53분</option><option value="54">54분</option><option value="55">55분</option>
+          <option value="56">56분</option><option value="57">57분</option><option value="58">58분</option><option value="59">59분</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="showSaju()">사주팔자 확인하기</button>
+  </section>
+
+  <section id="result" class="result">
+    <div class="result-title">YOUR SAJU · DETAIL READING</div>
+    <div class="saju-frame">
+      <div id="meta" class="meta"></div>
+      <div class="pillars">
+        <div class="pillar"><small>년주 · 年柱</small><div id="year" class="hanja">甲子</div><div class="kor">가문·초년운</div></div>
+        <div class="pillar"><small>월주 · 月柱</small><div id="month" class="hanja">乙丑</div><div class="kor">사회·직업운</div></div>
+        <div class="pillar"><small>일주 · 日柱</small><div id="day" class="hanja">丙寅</div><div class="kor">나의 본질</div></div>
+        <div class="pillar"><small>시주 · 時柱</small><div id="hour" class="hanja">丁卯</div><div class="kor">후반생·표현운</div></div>
+      </div>
+
+      <div class="energy">
+        <h3>오행 균형</h3>
+        <div class="bars">
+          <div class="barrow"><span>목</span><div class="bar"><div id="wood" class="fill" style="width:50%"></div></div><b id="woodN">50</b></div>
+          <div class="barrow"><span>화</span><div class="bar"><div id="fire" class="fill" style="width:50%"></div></div><b id="fireN">50</b></div>
+          <div class="barrow"><span>토</span><div class="bar"><div id="earth" class="fill" style="width:50%"></div></div><b id="earthN">50</b></div>
+          <div class="barrow"><span>금</span><div class="bar"><div id="metal" class="fill" style="width:50%"></div></div><b id="metalN">50</b></div>
+          <div class="barrow"><span>수</span><div class="bar"><div id="water" class="fill" style="width:50%"></div></div><b id="waterN">50</b></div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-card"><h3>🌙 전체 사주 총평</h3><p id="overall"></p></div>
+        <div class="detail-card"><h3>✨ 타고난 성향</h3><p id="personality"></p></div>
+        <div class="detail-card"><h3>💼 직업 · 사업운</h3><p id="career"></p></div>
+        <div class="detail-card"><h3>💰 재물운</h3><p id="money"></p></div>
+        <div class="detail-card"><h3>❤️ 연애 · 결혼운</h3><p id="love"></p></div>
+        <div class="detail-card"><h3>🤝 인간관계</h3><p id="relation"></p></div>
+        <div class="detail-card"><h3>🌿 건강 · 생활습관</h3><p id="health"></p></div>
+        <div class="detail-card"><h3>🔮 올해의 흐름</h3><p id="yearly"></p></div>
+      </div>
+
+
+      <div class="detail-card lifetime">
+        <h3>🕯️ 평생 운의 흐름</h3>
+        <p id="lifeIntro"></p>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <div class="detail-card" style="margin-top:14px">
+        <h3>🧭 당신에게 필요한 기운</h3>
+        <p id="advice"></p>
+        <div id="tags" style="margin-top:10px"></div>
+      </div>
+
+      <div class="desc">※ 사주팔자 계산·해석은 전통 명리학 콘텐츠를 바탕으로 한 참고용 프로토타입입니다. 실제 유료 서비스에서는 검증된 만세력 엔진과 전문 해석 DB를 연결해 절기·지역·서머타임 등을 정확히 반영하는 것을 권장합니다.</div>
+    </div>
+  </section>
+
+  <section class="compat-panel">
+    <div class="section-head">
+      <h2>♡ 두 사람의 궁합 보기</h2>
+      <p>나와 상대방의 생년월일시를 입력하면 관계의 강점과 주의점을 확인할 수 있습니다.</p>
+    </div>
+    <div class="compat-grid">
+      <div class="person-box">
+        <h3>나</h3>
+        <label>생년월일</label><input id="meBirth" type="date">
+        <label style="margin-top:10px">달력</label><select id="meCal"><option value="solar">양력</option><option value="lunar">음력</option></select>
+        <label style="margin-top:10px">태어난 시간</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <select id="meAmpm"><option value="AM">오전</option><option value="PM">오후</option></select>
+          <select id="meHour"><option>12</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option></select>
+        </div>
+        <select id="meMinute" style="margin-top:8px"><option value="00">00분</option><option value="01">01분</option><option value="02">02분</option><option value="03">03분</option><option value="04">04분</option><option value="05">05분</option><option value="06">06분</option><option value="07">07분</option><option value="08">08분</option><option value="09">09분</option><option value="10">10분</option><option value="11">11분</option><option value="12">12분</option><option value="13">13분</option><option value="14">14분</option><option value="15">15분</option><option value="16">16분</option><option value="17">17분</option><option value="18">18분</option><option value="19">19분</option><option value="20">20분</option><option value="21">21분</option><option value="22">22분</option><option value="23">23분</option><option value="24">24분</option><option value="25">25분</option><option value="26">26분</option><option value="27">27분</option><option value="28">28분</option><option value="29">29분</option><option value="30">30분</option><option value="31">31분</option><option value="32">32분</option><option value="33">33분</option><option value="34">34분</option><option value="35">35분</option><option value="36">36분</option><option value="37">37분</option><option value="38">38분</option><option value="39">39분</option><option value="40">40분</option><option value="41">41분</option><option value="42">42분</option><option value="43">43분</option><option value="44">44분</option><option value="45">45분</option><option value="46">46분</option><option value="47">47분</option><option value="48">48분</option><option value="49">49분</option><option value="50">50분</option><option value="51">51분</option><option value="52">52분</option><option value="53">53분</option><option value="54">54분</option><option value="55">55분</option><option value="56">56분</option><option value="57">57분</option><option value="58">58분</option><option value="59">59분</option></select>
+      </div>
+      <div class="person-box">
+        <h3>상대방</h3>
+        <label>생년월일</label><input id="youBirth" type="date">
+        <label style="margin-top:10px">달력</label><select id="youCal"><option value="solar">양력</option><option value="lunar">음력</option></select>
+        <label style="margin-top:10px">태어난 시간</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <select id="youAmpm"><option value="AM">오전</option><option value="PM">오후</option></select>
+          <select id="youHour"><option>12</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option></select>
+        </div>
+        <select id="youMinute" style="margin-top:8px"><option value="00">00분</option><option value="01">01분</option><option value="02">02분</option><option value="03">03분</option><option value="04">04분</option><option value="05">05분</option><option value="06">06분</option><option value="07">07분</option><option value="08">08분</option><option value="09">09분</option><option value="10">10분</option><option value="11">11분</option><option value="12">12분</option><option value="13">13분</option><option value="14">14분</option><option value="15">15분</option><option value="16">16분</option><option value="17">17분</option><option value="18">18분</option><option value="19">19분</option><option value="20">20분</option><option value="21">21분</option><option value="22">22분</option><option value="23">23분</option><option value="24">24분</option><option value="25">25분</option><option value="26">26분</option><option value="27">27분</option><option value="28">28분</option><option value="29">29분</option><option value="30">30분</option><option value="31">31분</option><option value="32">32분</option><option value="33">33분</option><option value="34">34분</option><option value="35">35분</option><option value="36">36분</option><option value="37">37분</option><option value="38">38분</option><option value="39">39분</option><option value="40">40분</option><option value="41">41분</option><option value="42">42분</option><option value="43">43분</option><option value="44">44분</option><option value="45">45분</option><option value="46">46분</option><option value="47">47분</option><option value="48">48분</option><option value="49">49분</option><option value="50">50분</option><option value="51">51분</option><option value="52">52분</option><option value="53">53분</option><option value="54">54분</option><option value="55">55분</option><option value="56">56분</option><option value="57">57분</option><option value="58">58분</option><option value="59">59분</option></select>
+      </div>
+    </div>
+    <button onclick="showCompat()">궁합 결과 확인하기</button>
+    <div id="compatResult" class="compat-result">
+      <div class="compat-summary">
+        <div class="result-title">LOVE & RELATIONSHIP</div>
+        <h3 id="compatTitle">두 사람의 궁합</h3>
+        <div id="compatScore" class="score">82 <small>/ 100</small></div>
+        <p id="compatOverall"></p>
+      </div>
+      <div class="compat-details">
+        <div class="detail-card"><h3>💞 감정 · 연애 궁합</h3><p id="compatLove"></p></div>
+        <div class="detail-card"><h3>💬 대화 · 성향 궁합</h3><p id="compatTalk"></p></div>
+        <div class="detail-card"><h3>💰 현실 · 재물 궁합</h3><p id="compatMoney"></p></div>
+        <div class="detail-card"><h3>🏠 장기 관계 궁합</h3><p id="compatLong"></p></div>
+        <div class="detail-card"><h3>⚠️ 갈등 포인트</h3><p id="compatCaution"></p></div>
+        <div class="detail-card"><h3>🌸 관계를 좋게 만드는 방법</h3><p id="compatAdvice"></p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">月華 SAJU · 사주는 전통 명리학에 기반한 콘텐츠입니다.</div>月華 SAJU · 사주는 전통 명리학에 기반한 콘텐츠입니다.</div>
+</div>
+
+<script>
+const stems=["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const branches=["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const element={甲:"목",乙:"목",丙:"화",丁:"화",戊:"토",己:"토",庚:"금",辛:"금",壬:"수",癸:"수",子:"수",丑:"토",寅:"목",卯:"목",辰:"토",巳:"화",午:"화",未:"토",申:"금",酉:"금",戌:"토",亥:"수"};
+const elemKorean={목:"성장·확장",화:"열정·표현",토:"안정·현실",금:"원칙·결단",수:"지혜·유연"};
+function ganzhi(i){return stems[(i+60)%10]+branches[(i+60)%12]}
+function hour24(ampm,id){let h=+document.getElementById(id).value;if(ampm==="AM")return h===12?0:h;return h===12?12:h+12}
+function calcPillars(dateStr,h){
+  const d=new Date(dateStr+"T12:00:00"),y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate();
+  const yi=(y-4+60)%60;
+  const mb=(m+1)%12, ys=yi%10, start=[2,4,6,8,0][Math.floor(ys/2)], mn=((m+10)%12)+1, ms=(start+mn-1)%10;
+  const jdn=Math.floor(Date.UTC(y,m-1,day)/86400000)+2440588, di=(jdn+49)%60;
+  const hb=Math.floor(((h+1)%24)/2), hs=(di%10*2+hb)%10;
+  return {
+    year:stems[yi%10]+branches[yi%12],
+    month:stems[ms]+branches[mb],
+    day:stems[di%10]+branches[di%12],
+    hour:stems[hs]+branches[hb],
+    stems:[stems[yi%10],stems[ms],stems[di%10],stems[hs]],
+    branches:[branches[yi%12],branches[mb],branches[di%12],branches[hb]],
+    dayStem:stems[di%10],dayElement:element[stems[di%10]],y,m,day,h
+  };
+}
+function elementCounts(p){
+  const c={목:0,화:0,토:0,금:0,수:0};
+  [...p.stems,...p.branches].forEach(x=>{if(element[x])c[element[x]]++});
+  return c;
+}
+function dominant(c){return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]}
+function weak(c){return Object.keys(c).sort((a,b)=>c[a]-c[b])[0]}
+function setText(id,text){document.getElementById(id).textContent=text}
+
+function showSaju(){
+  const name=document.getElementById("name").value.trim()||"귀하",birth=document.getElementById("birth").value,cal=document.getElementById("calendar").value;
+  if(!birth){alert("생년월일을 입력해주세요.");return}
+  const h=hour24(document.getElementById("ampm").value,"hour12"), min=document.getElementById("minute").value, p=calcPillars(birth,h), c=elementCounts(p), dom=dominant(c), wk=weak(c);
+  setText("year",p.year);setText("month",p.month);setText("day",p.day);setText("hour",p.hour);
+  ["목","화","토","금","수"].forEach((k,i)=>{const id=["wood","fire","earth","metal","water"][i],v=Math.round(c[k]/8*100);document.getElementById(id).style.width=Math.max(8,v)+"%";setText(id+"N",v)});
+  setText("meta",`${name} · ${birth.replaceAll("-",".")} · ${cal==="solar"?"양력":"음력"} · ${document.getElementById("ampm").value==="AM"?"오전":"오후"} ${String(h%12||12).padStart(2,"0")}:${min}`);
+  setText("overall",`${p.dayStem} 일간(${p.dayElement})을 중심으로 보면 ${elemKorean[p.dayElement]}의 성향이 핵심입니다. ${dom}의 기운이 비교적 강하고 ${wk}의 기운은 약하게 나타납니다. 강점을 한 분야에 깊게 쌓을수록 성과가 커지며, 부족한 기운은 습관·환경·관계에서 의식적으로 보완하는 방식이 좋습니다.`);
+  setText("personality",`${elemKorean[p.dayElement]} 성향이 기본 바탕입니다. 사람과 상황을 빠르게 파악하고 자신의 기준이 생기면 추진력이 좋아지는 타입으로 볼 수 있습니다. 반대로 감정이나 생각을 혼자 오래 쌓아두면 피로가 커질 수 있어, 중요한 관계에서는 생각을 말로 풀어내는 것이 도움이 됩니다.`);
+  setText("career",`${dom}의 강점을 살리는 직무와 인연이 있습니다. 특히 경험을 축적해 전문성이 높아지는 일, 기획·콘텐츠·교육·분석·관리처럼 판단과 표현을 함께 사용하는 일이 잘 맞습니다. 직업 선택에서는 단기 보상보다 '내 이름으로 남는 실력'을 만드는 방향이 장기적으로 유리합니다.`);
+  setText("money",`재물은 능력과 신뢰가 쌓일수록 안정되는 흐름으로 보는 것이 좋습니다. 수입원을 무리하게 늘리기보다 본업의 단가와 전문성을 높인 뒤 부수입을 단계적으로 확장하는 방식이 적합합니다. 큰 결정을 할 때는 감정적인 낙관보다 현금흐름과 지속 가능성을 먼저 확인하세요.`);
+  setText("love",`연애에서는 단순한 설렘보다 신뢰와 생활의 합이 중요합니다. 좋아하는 마음이 생기면 상대를 세심하게 관찰하는 편이지만, 상대가 알아서 이해해 주기를 기대하면 오해가 생길 수 있습니다. 감정 표현과 현실적인 약속을 함께 만드는 관계가 오래가기 좋습니다.`);
+  setText("relation",`넓고 얕은 관계보다 목적과 가치관이 맞는 사람과 깊게 연결되는 것이 편합니다. 자신의 기준을 지키면서도 상대의 속도를 인정하면 인간관계에서 불필요한 소모를 줄일 수 있습니다.`);
+  setText("health",`전통 명리학적 관점에서 ${wk} 기운을 보완하는 생활 리듬을 참고해 보세요. 규칙적인 수면·식사, 가벼운 운동, 충분한 휴식처럼 기본 습관을 일정하게 유지하는 것이 좋습니다. 의학적 진단이나 치료를 대신하는 내용은 아닙니다.`);
+  const now=new Date().getFullYear();setText("yearly",`${now}년은 방향을 다시 잡고 실력을 현실적인 성과로 연결하기 좋은 해로 해석할 수 있습니다. 상반기에는 정리와 선택, 하반기에는 실행과 확장에 초점을 두는 식으로 계획을 나누면 좋습니다. 새로운 기회가 와도 모두 잡기보다 장기적으로 남을 한두 가지에 집중하세요.`);
+  setText("advice",`${dom}의 강점은 적극적으로 사용하되 ${wk}의 약점을 생활 습관으로 보완하세요. 특히 새로운 일을 시작할 때 '빨리 결과를 내는 것'보다 '1년 뒤에도 계속할 수 있는 구조'를 만드는 것이 중요합니다.`);
+  document.getElementById("tags").innerHTML=`<span class="tag">핵심기운 · ${p.dayElement}</span><span class="tag">강점 · ${dom}</span><span class="tag">보완 · ${wk}</span><span class="tag">키워드 · ${elemKorean[p.dayElement]}</span>`;
+
+  const phases=[
+    ["10~19세","기초를 쌓는 시기","경험·학습"],
+    ["20~29세","진로를 넓히는 시기","도전·독립"],
+    ["30~39세","자리 잡는 시기","전문성·성과"],
+    ["40~49세","확장하는 시기","리더십·자산"],
+    ["50~59세","축적을 회수하는 시기","안정·관리"],
+    ["60세+","삶의 깊이가 커지는 시기","관계·여유"]
+  ];
+  setText("lifeIntro",`전체적인 평생 흐름은 '배우고 → 경험하고 → 전문성을 만들고 → 축적한 것을 확장하는' 구조로 보는 것이 좋습니다. 나이에 따라 같은 강점도 사용하는 방식이 달라지므로 시기별 전략을 달리하는 것이 핵심입니다.`);
+  document.getElementById("timeline").innerHTML=phases.map(x=>`<div class="life-item"><strong>${x[0]}</strong><span>${x[1]}<br>${x[2]}</span></div>`).join("");
+  document.getElementById("result").classList.add("show");document.getElementById("result").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function showCompat(){
+  const a=document.getElementById("meBirth").value,b=document.getElementById("youBirth").value;
+  if(!a||!b){alert("두 사람의 생년월일을 모두 입력해주세요.");return}
+  const ah=hour24(document.getElementById("meAmpm").value,"meHour"),bh=hour24(document.getElementById("youAmpm").value,"youHour");
+  const pa=calcPillars(a,ah),pb=calcPillars(b,bh),ca=elementCounts(pa),cb=elementCounts(pb);
+  const ae=pa.dayElement,be=pb.dayElement;
+  const relationMap={
+    "목화":"서로의 추진력을 끌어올리는 조합","화토":"한 사람의 열정을 다른 사람이 현실적인 결과로 연결하는 조합",
+    "토금":"안정과 기준을 함께 세우기 좋은 조합","금수":"논리와 유연함이 서로를 보완하는 조합","수목":"아이디어와 성장을 함께 만드는 조합"
+  };
+  const key=ae+be, rev=be+ae, score=72+((a.charCodeAt(8)||1)+(b.charCodeAt(8)||1))%23;
+  setText("compatTitle",`${ae} × ${be} 기운의 관계`);
+  setText("compatScore",score+" / 100");
+  setText("compatOverall",relationMap[key]||relationMap[rev]||"서로 다른 방식으로 생각하고 행동할 가능성이 있어, 차이를 이해하면 오히려 관계의 폭이 넓어지는 조합입니다.");
+  setText("compatLove",`두 사람 모두에게 중요한 것은 '내가 사랑받고 있다는 확신'입니다. 표현 방식은 다를 수 있으므로 상대의 표현을 자신의 방식으로만 해석하지 않는 것이 좋습니다. 작은 약속을 지키는 행동이 애정도를 높입니다.`);
+  setText("compatTalk",`${ae} 기운은 ${elemKorean[ae]} 쪽으로, 상대는 ${elemKorean[be]} 쪽으로 표현되는 경향을 참고할 수 있습니다. 의견 충돌이 생기면 누가 맞는지보다 서로의 결론에 도달한 과정을 설명하는 것이 효과적입니다.`);
+  setText("compatMoney",`돈을 쓰는 기준과 미래 계획을 미리 맞춰두면 안정감이 커집니다. 공동 지출과 개인 지출의 경계를 분명하게 정하고 큰돈을 쓸 때 사전 합의를 만드는 것이 좋습니다.`);
+  setText("compatLong",`장기 관계에서는 감정의 강도보다 생활 리듬의 호환성이 중요합니다. 함께할 목표 하나와 각자의 독립적인 영역 하나를 동시에 유지하면 관계가 건강하게 오래가기 좋습니다.`);
+  setText("compatCaution",`갈등이 생겼을 때 한 사람은 빨리 결론을 내리고 다른 사람은 생각할 시간을 필요로 할 수 있습니다. 이 차이를 '무관심'이나 '고집'으로 단정하지 않는 것이 가장 중요합니다.`);
+  setText("compatAdvice",`일주일에 한 번 정도 서로의 일정·돈·감정 상태를 편하게 이야기하는 시간을 만들어 보세요. 관계를 유지하는 힘은 거창한 이벤트보다 반복되는 작은 신뢰에서 만들어집니다.`);
+  document.getElementById("compatResult").classList.add("show");
+  document.getElementById("compatResult").scrollIntoView({behavior:"smooth",block:"center"});
+}
+</script>
+</body>
+</html>
